@@ -1,0 +1,254 @@
+---
+title: "Traitement du langage naturel avec R"
+author: "Bruno Tremblay"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    fig_caption: false
+    toc: true
+    toc_float:
+      collapsed: false
+      smooth_scroll: false
+    toc_depth: 3
+vignette: >
+  %\VignetteIndexEntry{Traitement du langage naturel avec R}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+```{r global_options, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+# Survol
+
+L'objectif de cet atelier et de vous présenter différentes méthodes pour intégrer des documents
+dans un contexte d'apprentissage machine.  
+
+À la base, un document doit être transformé en une représentation numérique pour pouvoir être
+utilisé dans un algorithme d'entraînement.
+
+La technique utilisée pour effectuer cette transformation a un grand impact sur les résultats.
+C'est ce que nous explorerons aujourd'hui.
+
+# Agenda
+
+1. Base
+    + Comment importer des documents (tm, rvest, odbc, jsonlite)
+    + Un petit mot sur l'encodage
+    + Manipuler des chaînes de caractères (grep it like its hot)
+2. Transformations
+    + Orthographe (hunspell)
+    + Stopwords (tm)
+    + Stemming (SnowballC)
+    + Collocations
+    + Contextes négatifs
+    + Matrice de fréquence des termes dans un documents
+3. Apprentissage machine
+
+# Atelier
+
+## Base
+
+### Comment importer des documents
+
+#### À partir d'une source de données odbc (odbc)
+
+```{r importodbc, eval = FALSE}
+library(odbc)
+docs <- dbGetQuery(dbConnect(odbc(), "DSN"), "SELECT TEXT FROM COMMENTS")
+```
+
+#### À partir d'internet (rvest)
+
+```{r importrvest}
+library(rvest)
+content <- read_html('https://old.reddit.com/r/Quebec/')
+submissions <- content %>% html_nodes('a.title') %>% html_text
+links <- content %>% html_nodes('a.title') %>% html_attr("href")
+rqclatest <- data.frame("submissions" = submissions, "links" = links)
+rqclatest
+```
+
+Référence :  
+* https://datascienceplus.com/building-a-hacker-news-scraper-with-8-lines-of-r-code-using-rvest-library/
+
+#### À partir de documents pdf ou d'images (tesseract, tm)
+
+```{r importpdf, eval = FALSE}
+library(tesseract)
+vignette("intro", "tesseract")
+```
+Références :  
+* https://data.library.virginia.edu/reading-pdf-files-into-r-for-text-mining/
+* https://medium.com/@CharlesBordet/how-to-extract-and-clean-data-from-pdf-files-in-r-da11964e252e
+
+#### À partir d'un archive de fichiers json
+
+```{r importfiles, eval = FALSE}
+library(jsonlite)
+
+archive <- "../extract_json_r_20190412.zip"
+unzip(archive, overwrite = TRUE, junkpaths = TRUE, exdir = "../json")
+files <- dir("../json", full.names = TRUE, recursive = FALSE)
+docs <- sapply(files,
+                function(file) {
+                  content <- readLines(file, encoding = "latin1", warn = FALSE)
+                  content <- iconv(content, from = "ISO8859-1", to = "UTF-8")
+                  # content <- gsub("\\\\", "\\\\u005C", content)
+                  # content <- gsub("\u0008", "\\\\u0008", content)
+                  # content <- gsub("\u0009", "\\\\u0009", content)
+                  # content <- gsub("\u000A", "\\\\u000A", content)
+                  # content <- gsub("\u000C", "\\\\u000C", content)
+                  # content <- gsub("\u000D", "\\\\u000D", content)
+                  decoded <- try(fromJSON(content))
+                  if (class(decoded) == "try-error") {
+                    print(file)
+                    return()
+                  } else {
+                    return(decoded$text-content)
+                  }
+                })
+```
+
+#### À partir d'un data déjà créé pour l'atelier d'aujourd'hui
+
+```{r importdt}
+utils::data(collisions, package = "nlpraqc19")
+assign("collisions", collisions, envir = environment())
+docs <- collisions
+docs[sample(1:nrow(docs), 5)]
+```
+
+### Un petit mot sur l'encodage
+
+Si vous voyez apparaître des symboles � inattendus dans vos chaînes de caractères,
+c'est probablement parce qu'il y a un problème avec l'encodage.
+
+Pour faire une histoire courte, vos programmes utilisent une table d'encodage pour
+déterminer la correspondance entre la représentation binaire et la représentation
+symbolique des caractères.
+
+Donc pour s'assurer d'avoir la bonne représentation, il faut effectuer la lecture
+ou l'écriture des données avec le bon encodage.
+
+```{r encodagelecture, eval = FALSE}
+# Définir l'encodage au niveau d'une connexion
+dbConnect(odbc(), encoding = "latin1")
+
+# Convertir l'encodage d'une chaîne de caractères
+iconv(text, from = "ISO8859-1", to = "UTF-8")
+```
+
+Référence :  
+https://kevinushey.github.io/blog/2018/02/21/string-encoding-and-r/
+
+### Manipuler des chaînes de caractères (grep it like its hot)
+
+Il y a quelques outils de base qui sont indispensables à la manipulation
+de chaînes de caractères.
+
+#### grep, gsub et expressions régulières
+
+Trouver les 10 premiers commentaires qui contiennent le mot "chat".
+```{r regex1}
+grep("chat", collisions$QUEST_CICH_COMNT)[1:10]
+```
+
+Ça nous donne l'indice mais si on veut la valeur.
+```{r regex2}
+grep("chat", collisions$QUEST_CICH_COMNT, value = TRUE)[1:10]
+```
+
+C'est pas tout à fait ça, on veut le mot chat donc il faut mieux définir notre expression de recherche. Ajoutons l'option d'ignorer minuscule masjucule.
+
+```{r regex3}
+grep("\\bchat\\b", collisions$QUEST_CICH_COMNT, value = TRUE, ignore.case = TRUE)[1:10]
+```
+
+Les expressions régulières sont très puissantes. Elles permettent de trouver rapidement de l'information. Maîtriser les et dominer les mondes... ou presque.
+
+```{r regex4}
+?regex
+```
+
+Vous pouvez expérimenter avec différentes expressions pour identifier des cas. C'est comme un où est Charlie.
+
+
+
+Trouver quelqu'un qui est rentré dans un arbre.
+
+```{r regex5}
+txt <- collisions$QUEST_CICH_COMNT
+grep("\\brentr", txt[grep("\\barbre\\b",txt)], value = TRUE, ignore.case = TRUE)[1]
+```
+
+Bonjour la police
+
+```{r regex6}
+grep("voiture de police|char de police", txt, value = TRUE, ignore.case = TRUE)[1:5]
+```
+
+Est-ce que je peux avoir votre code postal?
+
+```{r regex7}
+grep("[a-z][0-9][a-z][ -]?[[:digit:]][[:alpha:]][[:digit:]]", txt, value = TRUE, ignore.case = TRUE)[1:5]
+```
+
+La fonction gsub sert à effectuer des remplacements. Elle pourrait servir à retirer les informations sensibles des champs textes comme les numéros de téléphones.
+
+```{r regex8}
+phonepattern <- "\\b\\(?([0-9]{3})\\)?[-. ]?([0-9]{3})[-. ]?([0-9]{4})\\b"
+findtel <- grep(phonepattern, txt, value = TRUE, ignore.case = TRUE)[1]
+data.frame("origine" = findtel, "remplacement" = gsub(phonepattern, "", findtel))
+```
+
+#### Autres fonctions utiles
+
+Les fonctions substr, strsplit, paste, paste0, tolower, toupper sont également très pratiques.
+
+```{r stringsubstr}
+phrase <- sample(txt, 1)
+substr(phrase, max(1, nchar(phrase) - 10), nchar(phrase))
+```
+
+```{r stringstrsplit}
+strsplit(phrase, "[^[:alnum:]]+")
+```
+
+```{r stringpaste}
+paste("sors avec", unlist(strsplit(phrase, "[^[:alnum:]]+")))
+```
+
+```{r stringpaste0}
+paste0(21:69, collapse = ",")
+```
+
+```{r stringto}
+toupper(phrase)
+
+```
+
+## Transformations
+
+### Orthographes
+
+Le package hunspell permet d'effectuer la correction orthographique de textes.
+
+```{r hunspell, eval = FALSE}
+library(hunspell)
+vignette("intro", "hunspell")
+```
+
+Maintenant regardons une phrase dans nos données.
+
+```{r spellcheck}
+phrase <- sample(txt, 1)
+
+```
+
+### Présentation du package text2vec
+
+http://text2vec.org/
+
+
+
