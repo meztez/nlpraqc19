@@ -1,0 +1,12 @@
+Package: nlpraqc19
+Type: Package
+Title: R NLP R@Quebec 2019
+Version: 1.0.0
+Author: Bruno Tremblay
+Maintainer: Bruno Tremblay <bruno.tremblay@lacapitale.com>
+Description: Natural language processing in R workshop. R@Quebec 2019.
+License: GPL-2
+Encoding: UTF-8
+LazyData: true
+Depends: R (>= 3.5.3), tidytext, tm, text2vec, SnowballC, hunspell, keras
+RoxygenNote: 6.1.1
