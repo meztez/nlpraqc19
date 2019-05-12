@@ -113,10 +113,13 @@ docs <- sapply(files,
 
 #### À partir d'un data déjà créé pour l'atelier d'aujourd'hui
 
+```{r datatable, echo=FALSE}
+library(data.table)
+```
+
 ```{r importdt}
 utils::data(collisions, package = "nlpraqc19")
-assign("collisions", collisions, envir = environment())
-docs <- collisions
+docs <- nlpraqc19::collisions
 docs[sample(1:nrow(docs), 5)]
 ```
 
@@ -203,6 +206,14 @@ findtel <- grep(phonepattern, txt, value = TRUE, ignore.case = TRUE)[1]
 data.frame("origine" = findtel, "remplacement" = gsub(phonepattern, "", findtel))
 ```
 
+Les fonctions gregexpr et regmatches permettent d'extraire les valeurs directement des chaînes de caractères.
+
+```{r regex9}  
+parsed <- gregexpr(phonepattern, txt)
+matches <- regmatches(txt, parsed)
+unlist(unlist(matches))[1:10]
+```
+
 #### Autres fonctions utiles
 
 Les fonctions substr, strsplit, paste, paste0, tolower, toupper sont également très pratiques.
@@ -233,19 +244,98 @@ toupper(phrase)
 
 ### Orthographes
 
-Le package hunspell permet d'effectuer la correction orthographique de textes.
+Le package hunspell permet d'effectuer de valider l'orthographe de textes.
 
-```{r hunspell, eval = FALSE}
+Charger hunspell
+
+```{r hunspell1}  
 library(hunspell)
-vignette("intro", "hunspell")
 ```
 
-Maintenant regardons une phrase dans nos données.
+Télécharger le dictionnaire français le plus à jour.
 
-```{r spellcheck}
-phrase <- sample(txt, 1)
-
+```{r}
+tempf <- tempfile()
+tempd <- tempdir()
+download.file("http://grammalecte.net/download/fr/hunspell-french-dictionaries-v6.4.1.zip", tempf)
+dicts <- grep("tes\\.aff?|tes\\.dic?", unzip(tempf, list = TRUE)$Name, value = TRUE)
+unzip(tempf, files = dicts, overwrite = TRUE, junkpaths = TRUE, exdir = tempd)
+dict_fr
 ```
+
+```{r hunspell3}
+custom_words <- c("b2","b3","tp","vh","boul","v\U00e9h","faq","vt","faq20",
+                 "veh","mtl","43a","qc","rdp","dir","43ae","cond","domms",
+                 "20a","iga","aut","ins","ste","st","blv","domm","pcq","bags",
+                 "43e","rp","coord","faq43a","berpa","13c","faq27","str")
+dict_fr <- dictionary(paste0(tempd, "\\", grep("\\.dic", dicts, value = TRUE)), add_words = custom_words)
+dict_en <- dictionary("en_CA", add_words = custom_words)
+```
+
+Maintenant regardons des phrases dans nos données.
+
+```{r hunspell4}  
+phrases <- sample(txt, 5)
+words <- hunspell_parse(phrases, dict = dict_fr)
+correct <- lapply(words, hunspell_check, dict_fr)
+sapply(correct, all)
+```
+
+Trouvez les mots mal orthographiés ou non reconnus.  
+
+```{r hunspell5}
+bad <- lapply(1:length(words),function(x) {words[[x]][!correct[[x]]]})
+bad
+```
+
+On peut aussi passer par hunspell directement.
+
+```{r hunspell6}  
+hunspell(phrases, dict = dict_fr)
+```
+
+Qu'est-ce que le dictionaire propose?  
+
+```{r hunspell7}
+lapply(bad, function(x) {
+  suggest <- hunspell_suggest(x, dict = dict_fr)
+  names(suggest) <- x
+  suggest
+  })
+```
+
+Tentative d'autocorrection. Si plus de 50% des mots sont mal orthographiés, on va assumer que c'est anglais. Pas efficace mais honnête.
+
+```{r hunspell8}
+autocorrect <- function(txt, dict, alt_dict) {
+  parsed <- hunspell_parse(txt, dict = dict)
+  checked <- lapply(parsed, hunspell_check, dict = dict)
+  suggested <- lapply(1:length(parsed), function(i) {
+    if (!all(checked[[i]])) {
+      if (sum(!checked[[i]])/length(checked[[i]]) > 0.5) {
+        checked[[i]] <- hunspell_check(parsed[[i]], alt_dict)
+        dict_suggest <- alt_dict
+      } else {
+        dict_suggest <- dict
+      }
+      suggested <- unlist(lapply(hunspell_suggest(parsed[[i]][!checked[[i]]], dict = dict_suggest), `[`, 1))
+      parsed[[i]][!checked[[i]]] <- ifelse(is.na(suggested), parsed[[i]][!checked[[i]]], suggested)
+    }
+    parsed[[i]]
+  })
+  return(unlist(lapply(suggested, paste, collapse = " ")))
+}
+```
+
+On essaie  
+
+```{r hunspell9}
+autocorrect(phrases, dict_fr, dict_en)
+autocorrect("hi, grandma? can u come pyck me up from my rap batttle? it's over. no, i lost. he saw u droop me off & did a prety devastating rhyme about it", dict_fr, dict_en)
+```
+
+La réalité de la vie c'est que nos données sont pas propre propre et que la correction de mots sans contexte c'est pas facile.
+
 
 ### Présentation du package text2vec
 
