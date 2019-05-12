@@ -22,7 +22,8 @@ knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 # Survol
 
 L'objectif de cet atelier et de vous présenter différentes méthodes pour intégrer des documents
-dans un contexte d'apprentissage machine.  
+dans un contexte d'apprentissage machine. Vous devrez ensuite appliquer ces méthodes pour
+entraîner un modèle de classification binaire.
 
 À la base, un document doit être transformé en une représentation numérique pour pouvoir être
 utilisé dans un algorithme d'entraînement.

@@ -8,5 +8,6 @@ Description: Natural language processing in R workshop. R@Quebec 2019.
 License: GPL-2
 Encoding: UTF-8
 LazyData: true
-Depends: R (>= 3.5.3), tidytext, tm, text2vec, SnowballC, hunspell, keras
+Depends: R (>= 3.3.0), tidytext, text2vec, xgboost
+Suggests: keras, tesseract, rvest
 RoxygenNote: 6.1.1
