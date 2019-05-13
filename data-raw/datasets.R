@@ -1,5 +1,5 @@
 
-collisions <- readRDS("../lab/dtsin20181218.rds")
+collisions <- readRDS("../data/collisions.rds")
 collisions <- collisions[, .(QUEST_CICH_COMNT, QUEST_COLLISION_PERTETOT)]
 collisions <- collisions[sample(1:nrow(collisions), 100000)]
 
