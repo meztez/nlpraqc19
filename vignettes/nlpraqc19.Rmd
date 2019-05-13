@@ -16,7 +16,7 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 ```{r global_options, include = FALSE}
-knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, eval = FALSE)
 ```
 
 # Survol
@@ -155,29 +155,27 @@ de chaînes de caractères.
 
 Trouver les 10 premiers commentaires qui contiennent le mot "chat".
 ```{r regex1}
-grep("chat", collisions$QUEST_CICH_COMNT)[1:10]
+grep("chat", collisions$QUEST_CICH_COMNT)[1:3]
 ```
 
 Ça nous donne l'indice mais si on veut la valeur.
 ```{r regex2}
-grep("chat", collisions$QUEST_CICH_COMNT, value = TRUE)[1:10]
+grep("chat", collisions$QUEST_CICH_COMNT, value = TRUE)[1:3]
 ```
 
 C'est pas tout à fait ça, on veut le mot chat donc il faut mieux définir notre expression de recherche. Ajoutons l'option d'ignorer minuscule masjucule.
 
 ```{r regex3}
-grep("\\bchat\\b", collisions$QUEST_CICH_COMNT, value = TRUE, ignore.case = TRUE)[1:10]
+grep("\\bchat\\b", collisions$QUEST_CICH_COMNT, value = TRUE, ignore.case = TRUE)[1:3]
 ```
 
 Les expressions régulières sont très puissantes. Elles permettent de trouver rapidement de l'information. Maîtriser les et dominer les mondes... ou presque.
 
-```{r regex4}
+```{r regex4, eval=FALSE}
 ?regex
 ```
 
 Vous pouvez expérimenter avec différentes expressions pour identifier des cas. C'est comme un où est Charlie.
-
-
 
 Trouver quelqu'un qui est rentré dans un arbre.
 
@@ -189,13 +187,13 @@ grep("\\brentr", txt[grep("\\barbre\\b",txt)], value = TRUE, ignore.case = TRUE)
 Bonjour la police
 
 ```{r regex6}
-grep("voiture de police|char de police", txt, value = TRUE, ignore.case = TRUE)[1:5]
+grep("voiture de police|char de police", txt, value = TRUE, ignore.case = TRUE)[1:3]
 ```
 
 Est-ce que je peux avoir votre code postal?
 
 ```{r regex7}
-grep("[a-z][0-9][a-z][ -]?[[:digit:]][[:alpha:]][[:digit:]]", txt, value = TRUE, ignore.case = TRUE)[1:5]
+grep("[a-z][0-9][a-z][ -]?[[:digit:]][[:alpha:]][[:digit:]]", txt, value = TRUE, ignore.case = TRUE)[1:3]
 ```
 
 La fonction gsub sert à effectuer des remplacements. Elle pourrait servir à retirer les informations sensibles des champs textes comme les numéros de téléphones.
@@ -211,7 +209,7 @@ Les fonctions gregexpr et regmatches permettent d'extraire les valeurs directeme
 ```{r regex9}  
 parsed <- gregexpr(phonepattern, txt)
 matches <- regmatches(txt, parsed)
-unlist(unlist(matches))[1:10]
+unlist(unlist(matches))[1:3]
 ```
 
 #### Autres fonctions utiles
@@ -224,7 +222,7 @@ substr(phrase, max(1, nchar(phrase) - 10), nchar(phrase))
 ```
 
 ```{r stringstrsplit}
-strsplit(phrase, "[^[:alnum:]]+")
+strsplit(phrase, "[^-'[:alnum:]]+")
 ```
 
 ```{r stringpaste}
@@ -232,7 +230,7 @@ paste("sors avec", unlist(strsplit(phrase, "[^[:alnum:]]+")))
 ```
 
 ```{r stringpaste0}
-paste0(21:69, collapse = ",")
+paste0(21:31, collapse = ",")
 ```
 
 ```{r stringto}
@@ -244,7 +242,7 @@ toupper(phrase)
 
 ### Orthographes
 
-Le package hunspell permet d'effectuer de valider l'orthographe de textes.
+Le package hunspell permet de valider l'orthographe de textes.
 
 Charger hunspell
 
@@ -254,13 +252,12 @@ library(hunspell)
 
 Télécharger le dictionnaire français le plus à jour.
 
-```{r}
+```{r hunspell2, echo = FALSE, eval = FALSE}
 tempf <- tempfile()
 tempd <- tempdir()
 download.file("http://grammalecte.net/download/fr/hunspell-french-dictionaries-v6.4.1.zip", tempf)
 dicts <- grep("tes\\.aff?|tes\\.dic?", unzip(tempf, list = TRUE)$Name, value = TRUE)
 unzip(tempf, files = dicts, overwrite = TRUE, junkpaths = TRUE, exdir = tempd)
-dict_fr
 ```
 
 ```{r hunspell3}
@@ -304,7 +301,7 @@ lapply(bad, function(x) {
   })
 ```
 
-Tentative d'autocorrection. Si plus de 50% des mots sont mal orthographiés, on va assumer que c'est anglais. Pas efficace mais honnête.
+Tentative d'autocorrection. Si plus de 50% des mots sont mal orthographiés, on va assumer que c'est de l'anglais. Pas efficace mais honnête.
 
 ```{r hunspell8}
 autocorrect <- function(txt, dict, alt_dict) {
@@ -327,19 +324,548 @@ autocorrect <- function(txt, dict, alt_dict) {
 }
 ```
 
-On essaie  
+On essaie.  
 
-```{r hunspell9}
+```{r hunspell9, eval = FALSE}
 autocorrect(phrases, dict_fr, dict_en)
 autocorrect("hi, grandma? can u come pyck me up from my rap batttle? it's over. no, i lost. he saw u droop me off & did a prety devastating rhyme about it", dict_fr, dict_en)
 ```
 
-La réalité de la vie c'est que nos données sont pas propre propre et que la correction de mots sans contexte c'est pas facile.
+La réalité de la vie c'est que les données ne sont pas toujours parfaite et que la correction de mots sans contexte c'est pas facile.
+Il n'y a pas encore d'intégration de `grammalecte` avec R, mais ça existe en python via `reticulate`.
+À explorer.
 
+### Racine des mots *Optionel*
+
+Avec SnowballC. Des fois c'est utile pour réduire la taille d'un vocabulaire.
+
+```{r snowballc}
+library(SnowballC)
+lapply(strsplit(phrases, "[^-'[:alnum:]]+"), wordStem, language = "french")
+```
 
 ### Présentation du package text2vec
 
-http://text2vec.org/
+#### La vectorisation
+
+On reprend les guides de [http://text2vec.org](text2vec.org) mais avec nos données.
+Tout le crédit va à Dmitriy Selivanov, envoyez lui du love.
+
+Le setup.  
+
+```{r text2vec1}  
+library(text2vec)
+set.seed(3.1416)
+model_data <- collisions[, .(QUEST_CICH_COMNT)]
+model_data[, target := ifelse(collisions$QUEST_COLLISION_PERTETOT == "O", 1, 0)]
+model_data[, id := .I]
+all_ids <- model_data$id
+train_ids <- sample(all_ids, 80000)
+test_ids <- setdiff(all_ids, train_ids)
+train <- model_data[train_ids]
+test <- model_data[test_ids]
+```
+
+Représentation des documents dans l'espace vectoriel avec le vocabulaire.
+Pour l'instant on va utiliser un preprocessor de base.
+```{r text2vec2}
+prep_fun <- tolower
+tok_fun <- word_tokenizer
+
+it_train <- itoken(train$QUEST_CICH_COMNT, 
+             preprocessor = prep_fun, 
+             tokenizer = tok_fun, 
+             ids = train$id, 
+             progressbar = FALSE)
+vocab <- create_vocabulary(it_train)
+```
+
+Le vocabulaire c'est juste un data.frame avec les mots et des compteurs.  
+
+```{r text2vec3}
+head(vocab)
+```
+
+La matrice de fréquence des termes dans des documents.
+
+```{r text2vec4}
+vectorizer <- vocab_vectorizer(vocab)
+dtm_train <- create_dtm(it_train, vectorizer)
+dim(dtm_train)
+identical(rownames(dtm_train), as.character(train$id))
+```
+
+Le premier modèle. *Optionel*  
+
+```{r text2vec5}  
+library(glmnet)
+glmnet_classifier <- cv.glmnet(x = dtm_train, y = train[["target"]], 
+                              family = 'binomial', 
+                              # L1 penalty
+                              alpha = 1,
+                              # interested in the area under ROC curve
+                              type.measure = "auc",
+                              # n-fold cross-validation
+                              nfolds = 4,
+                              # high value is less accurate, but has faster training
+                              thresh = 1e-3,
+                              # again lower number of iterations for faster training
+                              maxit = 1e3)
+```
+
+Il était un fois un graphique.  
+
+```{r text2vec6}
+plot(glmnet_classifier)
+```
+
+Mais c'est un AUC!
+
+```{r text2vec7}
+print(paste("max AUC =", round(max(glmnet_classifier$cvm), 4)))
+```
+
+On peut reprendre le même vectorizer pour regarder la performance sur la validation. Je veux pas voler de punch mais c'est comme GoT 8. Va falloir travailler plus fort!
+
+```{r text2vec8}
+it_test <- itoken(test$QUEST_CICH_COMNT, 
+             preprocessor = prep_fun, 
+             tokenizer = tok_fun, 
+             ids = test$id, 
+             progressbar = FALSE)
+
+dtm_test = create_dtm(it_test, vectorizer)
+
+preds <- predict(glmnet_classifier, dtm_test, type = 'response')[,1]
+glmnet:::auc(test$target, preds)
+```
+
+Réduire la taille du vocabulaire.  
+
+Quand on enlève les stopwords, on perds les contextes négatifs.
+
+```{r text2vec9}
+swe <- tm::stopwords("en")
+swf <- tm::stopwords("fr")
+stop_words <- c(swe, swf)
+vocab <- create_vocabulary(it_train, stopwords = stop_words)
+```
+
+```{r text2vec10}
+pruned_vocab <- prune_vocabulary(vocab, 
+                                 term_count_min = 50, 
+                                 doc_proportion_max = 0.95)
+vectorizer <- vocab_vectorizer(pruned_vocab)
+dtm_train  <- create_dtm(it_train, vectorizer)
+```
+
+```{r text2vec11}
+dim(dtm_train)
+```
+
+```{r text2vec12}
+dtm_test <- create_dtm(it_test, vectorizer)
+dim(dtm_test)
+```
+
+Les n-grams ou comment fusionner des mots.  
+
+```{r text2vec13}  
+vocab <- create_vocabulary(it_train, ngram = c(1L, 2L), stopwords = stop_words)
+```
+
+```{r text2vec14}
+vocab <- prune_vocabulary(vocab,
+                          term_count_min = 50, 
+                          doc_proportion_max = 0.95)
+
+bigram_vectorizer <- vocab_vectorizer(vocab)
+
+dtm_train <- create_dtm(it_train, bigram_vectorizer)
+
+glmnet_classifier <- cv.glmnet(x = dtm_train, y = train[['target']], 
+                 family = 'binomial', 
+                 alpha = 1,
+                 type.measure = "auc",
+                 nfolds = 4,
+                 thresh = 1e-3,
+                 maxit = 1e3)
+```
+
+```{r text2vec15}
+plot(glmnet_classifier)
+```
+
+```{r text2vec16}
+print(paste("max AUC =", round(max(glmnet_classifier$cvm), 4)))
+```
+
+Dans notre cas, c'est pire.
+On ne reconnaît pas la différence entre *J'ai rentré dedans* et *J'ai pas rentré dedans*.  
+
+```{r text2vec17}
+dtm_test <- create_dtm(it_test, bigram_vectorizer)
+preds <- predict(glmnet_classifier, dtm_test, type = 'response')[,1]
+glmnet:::auc(test$target, preds)
+```
+
+Hash hash baby
+
+```{r text2vec18}
+h_vectorizer <- hash_vectorizer(hash_size = 2 ^ 14, ngram = c(1L, 2L))
+dtm_train <- create_dtm(it_train, h_vectorizer)
+```
+
+```{r text2vec19}
+glmnet_classifier <- cv.glmnet(x = dtm_train, y = train[['target']], 
+                             family = 'binomial', 
+                             alpha = 1,
+                             type.measure = "auc",
+                             nfolds = 5,
+                             thresh = 1e-3,
+                             maxit = 1e3)
+```
+
+```{r text2vec20}
+plot(glmnet_classifier)
+```
+
+```{r text2vec21}
+print(paste("max AUC =", round(max(glmnet_classifier$cvm), 4)))
+```
+
+```{r text2vec22}
+dtm_test <- create_dtm(it_test, h_vectorizer)
+preds <- predict(glmnet_classifier, dtm_test , type = 'response')[, 1]
+glmnet:::auc(test$target, preds)
+```
+
+Transformation de base
+
+Normalisation  
+
+```{r text2vec23}
+dtm_train_l1_norm <- normalize(dtm_train, "l1")
+```
+
+TF-IDF
+
+```{r text2vec24}
+vocab <- create_vocabulary(it_train)
+vectorizer <- vocab_vectorizer(vocab)
+dtm_train <- create_dtm(it_train, vectorizer)
+
+# define tfidf model
+tfidf <- TfIdf$new()
+# fit model to train data and transform train data with fitted model
+dtm_train_tfidf <- fit_transform(dtm_train, tfidf)
+# tfidf modified by fit_transform() call!
+# apply pre-trained tf-idf transformation to test data
+dtm_test_tfidf <- tfidf$transform(create_dtm(it_test, vectorizer))
+```
+
+```{r text2vec25}
+glmnet_classifier <- cv.glmnet(x = dtm_train_tfidf, y = train[['target']], 
+                              family = 'binomial', 
+                              alpha = 1,
+                              type.measure = "auc",
+                              nfolds = 4,
+                              thresh = 1e-3,
+                              maxit = 1e3)
+```
+
+```{r text2vec26}
+plot(glmnet_classifier)
+```
+
+```{r text2vec27}
+print(paste("max AUC =", round(max(glmnet_classifier$cvm), 4)))
+```
+
+```{r text2vec28}
+preds <- predict(glmnet_classifier, dtm_test_tfidf, type = 'response')[,1]
+glmnet:::auc(test$target, preds)
+```
+
+#### GloVe embeddings
+
+```{r text2vec29}
+itk <- itoken(collisions$QUEST_CICH_COMNT, 
+              preprocessor = tolower, 
+              tokenizer = tok_fun, 
+              ids = collisions[, id := .I]$id, 
+              progressbar = FALSE)
+vocab <- create_vocabulary(itk)
+```
+
+```{r text2vec30}
+vocab <- prune_vocabulary(vocab, term_count_min = 10)
+```
+
+```{r text2vec31}
+vectorizer <- vocab_vectorizer(vocab)
+tcm <- create_tcm(itk, vectorizer, skip_grams_window = 7L)
+```
+
+Fits like a GloVe
+
+```{r text2vec32}
+glove <- GlobalVectors$new(word_vectors_size = 50, vocabulary = vocab, x_max = 50)
+wv_main <- glove$fit_transform(tcm, n_iter = 25, convergence_tol = 0.001)
+```
+
+```{r text2vec33}
+dim(wv_main)
+```
+
+```{r text2vec34}
+wv_context <- glove$components
+dim(wv_context)
+```
+
+```{r text2vec35}
+word_vectors <- wv_main + t(wv_context)
+```
+
+```{r text2vec36}
+stationnement <- word_vectors["stationnement", , drop = FALSE]
+cos_sim <- sim2(x = word_vectors, y = stationnement, method = "cosine", norm = "l2")
+head(sort(cos_sim[,1], decreasing = TRUE), 50)
+```
+
+#### Collocations
+
+```{r text2vec37}
+model <- Collocations$new(collocation_count_min = 25)
+model$fit(itk, n_iter = 3)
+```
+
+```{r text2vec38}
+model$collocation_stat
+```
+
+On peut utliser les collocations pour identifier les contextes négatifs en créant un vocabulaire
+spécifique.
+
+```{r text2vec39}
+colloc <- Collocations$new(vocabulary = NULL, collocation_count_min = 50, pmi_min = 5, gensim_min = 0, lfmd_min = -Inf, sep = "_")
+?Collocations
+```
+
+```{r text2vec40}
+clean_text <- function(txt) {
+  txt <- tolower(txt)
+  # identifier contexte negatif par remplacement par un seul identifiant
+  neg <- c(
+    "aren't", "aucn", "aucun", "aucune", "can't", "cannot", "couldn't", "didn't",
+    "doesn't", "don't", "hadn't", "hasn't", "haven't", "isn't", "mustn't", "ni",
+    "no", "non", "none", "not", "pas", "persone de", "sans", "shan't", "shouldn't",
+    "wasn't", "weren't", "won't", "wouldn't"
+  )
+  txt <- gsub(paste0("\\b", neg, "\\b", collapse = "|"), "negctxt", txt)
+  # enlever les mots poches, les stopwords
+  swe <- tm::stopwords("en")
+  swf <- tm::stopwords("fr")
+  txt <- tm::removeWords(txt, c(swe, swf))
+  # enlever les accents avec le code unicode pour etre platform independant
+  o1 <- "\U0073\U007a\U00fe\U00e0\U00e1\U00e2\U00e3\U00e4\U00e5\U00e7\U00e8\U00e9\U00ea\U00eb\U00ec\U00ed\U00ee\U00ef\U00f0\U00f1\U00f2\U00f3\U00f4\U00f5\U00f6\U00f9\U00fa\U00fb\U00fc\U00fd"
+  n1 <- "szyaaaaaaceeeeiiiidnooooouuuuy"
+  txt <- chartr(o1, n1, txt)
+  # enlever ce qui est pas a-z
+  txt <- gsub("[[:punct:]]|[^[:graph:]]|[0-9]+", " ", txt)
+  txt <- gsub("[ ]+", " ", txt)
+  return(txt)
+}
+
+it <- itoken(model_data$QUEST_CICH_COMNT,
+             preprocessor = clean_text,
+             tokenizer = word_tokenizer,
+             ids = 1:nrow(collisions),
+             progressbar = FALSE)
+  
+colloc <- Collocations$new(collocation_count_min = 10, pmi_min = 5, gensim_min = 100, lfmd_min = -25, llr_min = 1000)
+colloc$fit(it, n_iter = 1)
+
+# Construire les phrases avec la collocation
+it_wc <- colloc$transform(it)
+vocab_wc <- create_vocabulary(it_wc)
+vocab_wc <- prune_vocabulary(vocab_wc, term_count_min = 50)
+vtz <- vocab_vectorizer(vocab_wc)
+
+# Utiliser la frequence relative des termes pour selectionner les mots les plus discriminants
+dtm <- create_dtm(it_wc, vtz)
+rfo <- Matrix::colSums(dtm[model_data$target == 1, ]) / sum(model_data$target == 1)
+rfn <- pmax(Matrix::colSums(dtm[model_data$target == 0, ]), 1) / sum(model_data$target == 0)
+rf <- sort(rfo / rfn, decreasing = TRUE)
+cutoff <- 1.5
+words <- names(rf)[rf >= cutoff | rf <= 1 / cutoff]
+c(head(words, 10), tail(words, 10))
+```
+
+On rajoute synthétiquement des collocations négatives  
+
+```{r text2vec41}
+# Reconstruire le vocabulaire et check les termes neg qui existe dans le corpus pour creer le vocab neg
+bvocab <- create_vocabulary(itoken(words))
+bvocabneg <- create_vocabulary(it_wc, ngram = c(2, 2))
+bvocabneg <- bvocabneg[grep("n\U00e9gative", bvocabneg$term), ]
+bvocabneg <- bvocabneg[bvocabneg$term %in% paste0("n\U00e9gative_", words), ]
+
+# Vecteurs de mots normaux et négatifs
+wordsvec <- sort(c(bvocab$term, bvocabneg$term))
+
+# Vocabulaire de base avec le vectorizer et les termes négatifs
+bvc <- create_vocabulary(itoken(wordsvec, progressbar = FALSE))
+bvc <- bvc[order(bvc$term), ]
+bvtz <- vocab_vectorizer(bvc)
+
+# Synthetic colloc to take care of neg words
+txt <- gsub("_", " ", bvc$term)
+itsynt <- itoken(txt, progressbar = FALSE)
+syntcolloc <- Collocations$new(collocation_count_min = 1, pmi_min = -Inf, gensim_min = 0)
+syntcolloc$fit(itsynt, n_iter = 2)
+```
+
+```{r text2vec42}
+it_train <- itoken(train$QUEST_CICH_COMNT,
+                   preprocessor = clean_text,
+                   tokenizer = word_tokenizer,
+                   progressbar = FALSE)
+modmtrx_train <- create_dtm(syntcolloc$transform(it_train), bvtz)
+it_test <- itoken(test$QUEST_CICH_COMNT,
+                  preprocessor = clean_text,
+                  tokenizer = word_tokenizer,
+                  progressbar = FALSE)
+modmtrx_test <- create_dtm(syntcolloc$transform(it_test), bvtz)
+```
+
+#### Modélisation de sujets
+
+LSA
+
+```{r text2vec43}
+tfidf <- TfIdf$new()
+lsa <- LSA$new(n_topics = 4)
+
+doc_embeddings <- lsa$fit_transform(tfidf$fit_transform(modmtrx_train))
+```
+
+```{r text2vec44}
+dim(doc_embeddings)
+```
+
+```{r text2vec45}
+dim(lsa$components)
+```
+
+```{r}
+new_doc_embeddings <- lsa$transform(tfidf$transform(modmtrx_test))
+dim(new_doc_embeddings)
+```
+
+LDA  
+
+```{r text2vec46}
+dtm <- create_dtm(syntcolloc$transform(it_train), bvtz, type = "dgTMatrix")
+
+lda_model <- LDA$new(n_topics = 4, doc_topic_prior = 0.1, topic_word_prior = 0.01)
+doc_topic_distr <- lda_model$fit_transform(x = dtm, n_iter = 1000, convergence_tol = 0.001, n_check_convergence = 25, progressbar = FALSE)
+
+```  
+
+```{r text2vec47}
+barplot(doc_topic_distr[1, ], xlab = "topic", ylab = "proportion", ylim = c(0, 1), names.arg = 1:ncol(doc_topic_distr))
+```
+
+Dans notre cas, le sujet est assez ciblé.
+
+```{r text2vec48}
+lda_model$get_top_words(n = 10, topic_number = c(1L, 2L, 3L, 4L), lambda = 1)
+```
+
+```{r text2vec49}
+lda_model$get_top_words(n = 10, topic_number = c(1L, 2L, 3L, 4L), lambda = 0.2)
+```
+
+```{r text2vec50}
+new_dtm <- create_dtm(syntcolloc$transform(it_test), bvtz, type = "dgTMatrix")
+new_doc_topic_distr <- lda_model$transform(new_dtm)
+```
+
+```{r text2vec51}
+perplexity(new_dtm, topic_word_distribution = lda_model$topic_word_distribution, doc_topic_distribution = new_doc_topic_distr)
+```
+
+Besoin du package LDAvis donc *optionel*
+
+```{r text2vec52}
+lda_model$plot()
+```
 
 
+## Apprentissage machine
 
+Définir les indices d'entraînement et de validation.  
+
+```{r modeling1, eval = FALSE}  
+n <- nrow(collisions)
+set.seed(8675309)
+```
+
+Charger la librairie de boosting de votre choix (xgboost, lightgbm, catboost).  
+
+```{r modeling2, eval = FALSE}
+library(xgboost)
+```
+
+Préparer les matrices pour l'entraînement en réutilisant notre matrice maison.  
+
+```{r modeling3, eval = FALSE}
+mtrx_train <- xgb.DMatrix(modmtrx_train, label = train$target)
+mtrx_test <- xgb.DMatrix(modmtrx_test, label = test$target)
+```
+
+Entraîner le modèle.
+
+```{r modeling4, eval = FALSE}
+set.seed(8675309)
+xgbmodel <- xgb.train(data = mtrx_train,
+                      watchlist = list(eval = mtrx_valid, train = mtrx_train),
+                      nrounds = 200,
+                      objective = "binary:logistic",
+                      booster = "gbtree",
+                      early_stopping_rounds = 50,
+                      print_every_n = 50,
+                      max_depth = 15,
+                      gamma = 5,
+                      subsample = 0.5,
+                      colsample_bytree = 1,
+                      eta = 0.1)
+```
+
+Vérifier les performances.
+
+```{r modeling5, eval = FALSE}
+preds <- predict(xgbmodel, mtrx_test)
+obs <- test$target
+
+recall <- function(p) {
+  sapply(p, function(p) {
+    prd <- as.numeric(preds > p)
+    length(which(prd == 1 & obs == 1)) / length(which(obs == 1))
+  })
+}
+
+precision <- function(p) {
+  sapply(p, function(p) {
+    prd <- as.numeric(preds > p)
+    length(which(prd == 1 & obs == 1)) / length(which(prd == 1))
+  })
+}
+
+x <- recall((1:250) / 250)
+y <- precision((1:250) / 250)
+
+plot(x, y, main = "Validation", xlab = "Recall", ylab = "Precision")
+
+```
