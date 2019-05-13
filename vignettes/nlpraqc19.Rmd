@@ -4,19 +4,20 @@ author: "Bruno Tremblay"
 date: "`r Sys.Date()`"
 output:
   html_document:
-    fig_caption: false
-    toc: true
-    toc_float:
-      collapsed: false
-      smooth_scroll: false
+    fig_caption: no
+    toc: yes
     toc_depth: 3
-vignette: >
-  %\VignetteIndexEntry{Traitement du langage naturel avec R}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
+    toc_float:
+      collapsed: no
+      smooth_scroll: no
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+vignette: |
+  %\VignetteIndexEntry{Traitement du langage naturel avec R} %\VignetteEngine{knitr::rmarkdown} %\VignetteEncoding{UTF-8}
 ---
 ```{r global_options, include = FALSE}
-knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, eval = FALSE)
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, eval = TRUE)
 ```
 
 # Survol
@@ -181,7 +182,7 @@ Trouver quelqu'un qui est rentré dans un arbre.
 
 ```{r regex5}
 txt <- collisions$QUEST_CICH_COMNT
-grep("\\brentr", txt[grep("\\barbre\\b",txt)], value = TRUE, ignore.case = TRUE)[1]
+grep("\\brentr", txt[grep("\\barbre\\b",txt)], value = TRUE, ignore.case = TRUE)[11]
 ```
 
 Bonjour la police
@@ -252,7 +253,7 @@ library(hunspell)
 
 Télécharger le dictionnaire français le plus à jour.
 
-```{r hunspell2, echo = FALSE, eval = FALSE}
+```{r hunspell2, echo = FALSE, eval = TRUE}
 tempf <- tempfile()
 tempd <- tempdir()
 download.file("http://grammalecte.net/download/fr/hunspell-french-dictionaries-v6.4.1.zip", tempf)
@@ -830,7 +831,7 @@ Entraîner le modèle.
 ```{r modeling4, eval = FALSE}
 set.seed(8675309)
 xgbmodel <- xgb.train(data = mtrx_train,
-                      watchlist = list(eval = mtrx_valid, train = mtrx_train),
+                      watchlist = list(eval = mtrx_test, train = mtrx_train),
                       nrounds = 200,
                       objective = "binary:logistic",
                       booster = "gbtree",
